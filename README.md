@@ -20,3 +20,6 @@ See https://github.com/bipropellant/bipropellant-protocol/blob/fe96935cb2f550110
 * Register callback function when values are received
 
 See https://github.com/bipropellant/bipropellant-hoverboard-api/blob/master/src/HoverboardAPI.cpp for detailed information of implemented functions.
+
+
+Don't forget to init submodules git submodule update --init --recursive

@@ -5,6 +5,10 @@
 #include "Stream.h"
 #endif
 
+
+int init_serial(char * dev_path, int baudrate);
+int send_data_serial(unsigned char * buffer, int len);
+
 class HoverboardAPI
 {
   public:
@@ -31,8 +35,11 @@ class HoverboardAPI
 };
 
   //commonly used functions **************************************************************************
-    HoverboardAPI(int (*send_serial_data)( unsigned char *data, int len ));          // * constructor.
-
+    #ifdef ARDUINO
+      HoverboardAPI(int (*send_serial_data)( unsigned char *data, int len ));          // * constructor.
+    #else
+      HoverboardAPI(char *dev_path, int baudrate) ;
+    #endif
     void protocolPush(unsigned char byte);
     void protocolTick();
     PARAMSTAT_FN updateParamHandler(Codes code, PARAMSTAT_FN callback);

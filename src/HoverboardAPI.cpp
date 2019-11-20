@@ -6,8 +6,12 @@
 #include "hbprotocol/protocol.h"
 #include "hbprotocol/protocol_private.h"
 #include "protocolFunctions.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <termios.h>
 #include <stdio.h>
-
+#include <strings.h>
 
 
 /*Constructor (...)*********************************************************
@@ -22,12 +26,6 @@
  *
  ***************************************************************************/
 
-#ifdef ARDUINO
-extern "C" {
-  extern void delay(uint32_t ms);
-  extern unsigned long millis(void);
-}
-#else
 #include <unistd.h>
 #include <time.h>
 
@@ -50,12 +48,47 @@ unsigned long millis() {
 
   return (uint32_t)(ts_now - ts_start);
 }
-#endif
+
+int global_serial_fd ;
+int init_serial(char * dev_path, int baudrate){
+    int fd, c, res;
+    struct termios oldtio,newtio;
+    char buf[255];
+    fd = open(dev_path, O_RDWR | O_NOCTTY ); 
+    if (fd <0) {
+      return -1 ;
+    }
+    tcgetattr(fd,&oldtio); /* save current serial port settings */
+    bzero(&newtio, sizeof(newtio)); /* clear struct for new port settings */
+    newtio.c_cflag = baudrate | CRTSCTS | CS8 | CLOCAL | CREAD ;
+    newtio.c_iflag = IGNPAR ;
+    newtio.c_oflag = 0;
+    newtio.c_lflag = ICANON;
+    tcflush(fd, TCIFLUSH);
+    tcflush(fd, TCOFLUSH);
+    tcsetattr(fd,TCSANOW,&newtio);
+    return fd ;
+}
+
+int send_data_serial(unsigned char * buffer, int len){
+  int tmp_length = len ;
+  do{
+    int ret = write(global_serial_fd, buffer, len);
+    if(ret < 0) return ret ;
+    buffer += ret ;
+    len -= ret ;
+  }while(len > 0);
+  return tmp_length ;
+}
+
+
+
 
 uint32_t tickWrapper(void) { return (uint32_t) millis(); }
 
+#ifdef ARDUINO
 HoverboardAPI::HoverboardAPI(int (*send_serial_data)( unsigned char *data, int len )) {
-  if(protocol_init(&s) != 0) while(1) {};
+ if(protocol_init(&s) != 0) while(1) {};
   setup_protocol();
   s.send_serial_data = send_serial_data;
   s.send_serial_data_wait = send_serial_data;
@@ -64,10 +97,24 @@ HoverboardAPI::HoverboardAPI(int (*send_serial_data)( unsigned char *data, int l
 //  s.timeout2 = 10; // timeout between characters
   protocol_GetTick = tickWrapper;
   protocol_Delay = delay;
-  setParamHandler(Codes::sensHall, NULL); // Disable callbacks for Hall
+  setParamHandler(Codes::sensHall, NULL); // Disable callbacks for Hall}
 }
+#else
+HoverboardAPI::HoverboardAPI(char *dev_path, int baudrate) {
+ if(protocol_init(&s) != 0) while(1) {};
+  global_serial_fd = init_serial(dev_path, baudrate);
 
-
+  setup_protocol();
+  s.send_serial_data = send_data_serial;
+  s.send_serial_data_wait = send_data_serial;
+  s.allow_ascii = 0;       // do not allow ASCII parsing.
+//  s.timeout1 = 50; //timeout for ACK
+//  s.timeout2 = 10; // timeout between characters
+  protocol_GetTick = tickWrapper;
+  protocol_Delay = delay;
+  setParamHandler(Codes::sensHall, NULL); // Disable callbacks for Hall}
+}
+#endif
 /***************************************************************************
  * Input function. Feed with Serial.read().
  ***************************************************************************/

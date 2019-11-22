@@ -12,6 +12,7 @@
 #include <termios.h>
 #include <stdio.h>
 #include <strings.h>
+#include <errno.h>
 
 
 /*Constructor (...)*********************************************************
@@ -52,22 +53,44 @@ unsigned long millis() {
 int global_serial_fd ;
 int init_serial(char * dev_path, int baudrate){
     int fd, c, res;
-    struct termios oldtio,newtio;
+    struct termios tty;
     char buf[255];
     fd = open(dev_path, O_RDWR | O_NOCTTY ); 
     if (fd <0) {
       return -1 ;
     }
-    tcgetattr(fd,&oldtio); /* save current serial port settings */
-    bzero(&newtio, sizeof(newtio)); /* clear struct for new port settings */
-    newtio.c_cflag = baudrate | CRTSCTS | CS8 | CLOCAL | CREAD ;
-    newtio.c_iflag = IGNPAR ;
-    newtio.c_oflag = 0;
-    newtio.c_lflag = ICANON;
+    if (tcgetattr(fd, &tty) < 0) {
+        printf("Error from tcgetattr\n");
+        return -1;
+    }
+
+    cfsetospeed(&tty, (speed_t)baudrate);
+    cfsetispeed(&tty, (speed_t)baudrate);
+
+    tty.c_cflag |= (CLOCAL | CREAD);    /* ignore modem controls */
+    tty.c_cflag &= ~CSIZE;
+    tty.c_cflag |= CS8;         /* 8-bit characters */
+    tty.c_cflag &= ~PARENB;     /* no parity bit */
+    tty.c_cflag &= ~CSTOPB;     /* only need 1 stop bit */
+    tty.c_cflag &= ~CRTSCTS;    /* no hardware flowcontrol */
+
+    /* setup for non-canonical mode */
+    tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
+    tty.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+    tty.c_oflag &= ~OPOST;
+
+    /* fetch bytes as they become available */
+    tty.c_cc[VMIN] = 1;
+    tty.c_cc[VTIME] = 1;
+
+    if (tcsetattr(fd, TCSANOW, &tty) != 0) {
+        printf("Error from tcsetattr \n");
+        return -1;
+    }
+
     tcflush(fd, TCIFLUSH);
     tcflush(fd, TCOFLUSH);
-    tcsetattr(fd,TCSANOW,&newtio);
-    return fd ;
+    return fd;
 }
 
 int send_data_serial(unsigned char * buffer, int len){

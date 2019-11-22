@@ -32,8 +32,8 @@ public :
     HoverboardAPI(char * dev_path, int baudrate);
 
     
-    //void protocolPush(unsigned char byte);
-    //void protocolTick();
+    void protocolPush(unsigned char byte);
+    void protocolTick();
     //PARAMSTAT_FN updateParamHandler(Codes code, PARAMSTAT_FN callback);
     //int updateParamVariable(Codes code, void *ptr, int len);
 

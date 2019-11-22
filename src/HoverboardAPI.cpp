@@ -50,6 +50,8 @@ unsigned long millis() {
   return (uint32_t)(ts_now - ts_start);
 }
 
+
+#ifndef ARDUINO
 int global_serial_fd ;
 int init_serial(char * dev_path, int baudrate){
     int fd, c, res;
@@ -79,9 +81,9 @@ int init_serial(char * dev_path, int baudrate){
     tty.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
     tty.c_oflag &= ~OPOST;
 
-    /* fetch bytes as they become available */
-    tty.c_cc[VMIN] = 1;
-    tty.c_cc[VTIME] = 1;
+    /* Non blocking */
+    tty.c_cc[VMIN] = 0;
+    tty.c_cc[VTIME] = 0;
 
     if (tcsetattr(fd, TCSANOW, &tty) != 0) {
         printf("Error from tcsetattr \n");
@@ -104,6 +106,11 @@ int send_data_serial(unsigned char * buffer, int len){
   return tmp_length ;
 }
 
+int read_data_serial(unsigned char * buffer, int len){
+  int ret = read(global_serial_fd, buffer, len);
+  return ret ;
+}
+#endif
 
 
 

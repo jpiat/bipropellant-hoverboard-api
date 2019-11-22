@@ -8,7 +8,7 @@
 
 int init_serial(char * dev_path, int baudrate);
 int send_data_serial(unsigned char * buffer, int len);
-
+int read_data_serial(unsigned char * buffer, int len);
 class HoverboardAPI
 {
   public:

@@ -32,8 +32,20 @@ public :
     HoverboardAPI(char * dev_path, int baudrate);
 
     
-    void protocolPush(unsigned char byte);
-    void protocolTick();
+    void protocolTask();
+    %MethodCode
+      unsigned char buffer[32] ;
+      int ret ;
+      if((ret = read_data_serial(buffer, 32)) > 0){
+        for(int i = 0 ; i < ret ; i ++){
+          sipCpp->protocolPush(buffer[i]);
+        }
+        sipCpp->protocolTick();
+      }
+    %End
+
+    //void protocolPush(unsigned char byte);
+    //void protocolTick();
     //PARAMSTAT_FN updateParamHandler(Codes code, PARAMSTAT_FN callback);
     //int updateParamVariable(Codes code, void *ptr, int len);
 

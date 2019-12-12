@@ -6,6 +6,8 @@
 #endif
 
 
+#define PROTOCOL_BAUD_RATE B115200
+
 int init_serial(char * dev_path, int baudrate);
 int send_data_serial(unsigned char * buffer, int len);
 int read_data_serial(unsigned char * buffer, int len);
@@ -38,28 +40,28 @@ class HoverboardAPI
     #ifdef ARDUINO
       HoverboardAPI(int (*send_serial_data)( unsigned char *data, int len ));          // * constructor.
     #else
-      HoverboardAPI(char *dev_path, int baudrate) ;
+      HoverboardAPI(char *dev_path) ;
     #endif
     void protocolPush(unsigned char byte);
     void protocolTick();
     PARAMSTAT_FN updateParamHandler(Codes code, PARAMSTAT_FN callback);
     int updateParamVariable(Codes code, void *ptr, int len);
 
-    void scheduleTransmission(Codes code, int count, unsigned int period, char som = PROTOCOL_SOM_NOACK);
+    void scheduleTransmission(Codes code, int count, unsigned int period, unsigned char som = PROTOCOL_SOM_NOACK);
 
-    void requestRead(Codes code, char som = PROTOCOL_SOM_NOACK);
-    void scheduleRead(Codes code, int count, unsigned int period, char som = PROTOCOL_SOM_NOACK);
+    void requestRead(Codes code, unsigned char som = PROTOCOL_SOM_NOACK);
+    void scheduleRead(Codes code, int count, unsigned int period, unsigned char som = PROTOCOL_SOM_NOACK);
 
 
-    void sendPWM(int16_t pwm, int16_t steer = 0, char som = PROTOCOL_SOM_NOACK);
-    void sendDifferentialPWM(int16_t left_cmd, int16_t right_cmd, char som = PROTOCOL_SOM_NOACK);
-    void sendPWMData(int16_t pwm, int16_t steer = 0, int speed_max_power = 600, int speed_min_power = -600, int speed_minimum_pwm = 10, char som = PROTOCOL_SOM_ACK);
-    void sendSpeedData(double left_speed, double right_speed, int16_t max_power, int16_t min_speed, char som = PROTOCOL_SOM_NOACK);
-    void sendPIDControl(int16_t Kp, int16_t Ki, int16_t Kd, int16_t speed_increment, char som = PROTOCOL_SOM_NOACK);
+    void sendPWM(int16_t pwm, int16_t steer = 0, unsigned char som = PROTOCOL_SOM_NOACK);
+    void sendDifferentialPWM(int16_t left_cmd, int16_t right_cmd, unsigned char som = PROTOCOL_SOM_NOACK);
+    void sendPWMData(int16_t pwm, int16_t steer = 0, int speed_max_power = 600, int speed_min_power = -600, int speed_minimum_pwm = 10, unsigned char som = PROTOCOL_SOM_ACK);
+    void sendSpeedData(double left_speed, double right_speed, int16_t max_power, int16_t min_speed, unsigned char som = PROTOCOL_SOM_NOACK);
+    void sendPIDControl(int16_t Kp, int16_t Ki, int16_t Kd, int16_t speed_increment, unsigned char som = PROTOCOL_SOM_NOACK);
 
-    void sendEnable(uint8_t newEnable, char som = PROTOCOL_SOM_ACK);
-    void sendBuzzer(uint8_t buzzerFreq = 4, uint8_t buzzerPattern = 0, uint16_t buzzerLen = 100, char som = PROTOCOL_SOM_NOACK);
-    void sendCounterReset(char som = PROTOCOL_SOM_ACK);
+    void sendEnable(uint8_t newEnable, unsigned char som = PROTOCOL_SOM_ACK);
+    void sendBuzzer(uint8_t buzzerFreq = 4, uint8_t buzzerPattern = 0, uint16_t buzzerLen = 100, unsigned char som = PROTOCOL_SOM_NOACK);
+    void sendCounterReset(unsigned char som = PROTOCOL_SOM_ACK);
 
     float getBatteryVoltage();
     float getMotorAmpsAvg(uint8_t motor);

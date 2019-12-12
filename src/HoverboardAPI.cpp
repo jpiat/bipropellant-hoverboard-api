@@ -31,7 +31,7 @@
 #include <time.h>
 
 void delay(uint32_t ms) { 
-  usleep (ms*1000); 
+  usleep(ms*1000); 
 }
 
 static uint64_t ts_start = 0;
@@ -53,57 +53,48 @@ unsigned long millis() {
 
 #ifndef ARDUINO
 int global_serial_fd ;
-int init_serial(char * dev_path, int baudrate){
-    int fd, c, res;
-    struct termios tty;
+int init_serial(char * dev_path){
+    int c, res;
+    struct termios options;
     char buf[255];
-    fd = open(dev_path, O_RDWR | O_NOCTTY ); 
-    if (fd <0) {
+    global_serial_fd = open(dev_path, O_RDWR | O_NOCTTY | O_NDELAY ); 
+    if (global_serial_fd <0) {
       return -1 ;
     }
-    if (tcgetattr(fd, &tty) < 0) {
+    if (tcgetattr(global_serial_fd, &options) < 0) {
         printf("Error from tcgetattr\n");
         return -1;
     }
 
-    cfsetospeed(&tty, (speed_t)baudrate);
-    cfsetispeed(&tty, (speed_t)baudrate);
+    tcgetattr(global_serial_fd, &options);
+    options.c_cflag = PROTOCOL_BAUD_RATE | CS8 | CLOCAL | CREAD ;		//<Set baud rate
+    options.c_iflag = IGNPAR;
+    options.c_oflag = 0;
+    options.c_lflag = 0;
 
-    tty.c_cflag |= (CLOCAL | CREAD);    /* ignore modem controls */
-    tty.c_cflag &= ~CSIZE;
-    tty.c_cflag |= CS8;         /* 8-bit characters */
-    tty.c_cflag &= ~PARENB;     /* no parity bit */
-    tty.c_cflag &= ~CSTOPB;     /* only need 1 stop bit */
-    tty.c_cflag &= ~CRTSCTS;    /* no hardware flowcontrol */
+    options.c_cc[VMIN] = 0;
+    options.c_cc[VTIME] = 0;
 
-    /* setup for non-canonical mode */
-    tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
-    tty.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
-    tty.c_oflag &= ~OPOST;
+    tcflush(global_serial_fd, TCIFLUSH);
 
-    /* Non blocking */
-    tty.c_cc[VMIN] = 0;
-    tty.c_cc[VTIME] = 0;
-
-    if (tcsetattr(fd, TCSANOW, &tty) != 0) {
+    if (tcsetattr(global_serial_fd, TCSANOW, &options) != 0) {
         printf("Error from tcsetattr \n");
         return -1;
     }
 
-    tcflush(fd, TCIFLUSH);
-    tcflush(fd, TCOFLUSH);
-    return fd;
+    return global_serial_fd;
 }
 
 int send_data_serial(unsigned char * buffer, int len){
   int tmp_length = len ;
+  int write_pointer = 0 ;
   do{
-    int ret = write(global_serial_fd, buffer, len);
+    int ret = write(global_serial_fd, &(buffer[write_pointer]), tmp_length);
     if(ret < 0) return ret ;
-    buffer += ret ;
-    len -= ret ;
-  }while(len > 0);
-  return tmp_length ;
+    write_pointer += ret ;
+    tmp_length -= ret ;
+  }while(tmp_length > 0);
+  return len ;
 }
 
 int read_data_serial(unsigned char * buffer, int len){
@@ -130,10 +121,9 @@ HoverboardAPI::HoverboardAPI(int (*send_serial_data)( unsigned char *data, int l
   setParamHandler(Codes::sensHall, NULL); // Disable callbacks for Hall}
 }
 #else
-HoverboardAPI::HoverboardAPI(char *dev_path, int baudrate) {
+HoverboardAPI::HoverboardAPI(char *dev_path) {
  if(protocol_init(&s) != 0) while(1) {};
-  global_serial_fd = init_serial(dev_path, baudrate);
-
+  init_serial(dev_path);
   setup_protocol();
   s.send_serial_data = send_data_serial;
   s.send_serial_data_wait = send_data_serial;
@@ -218,7 +208,7 @@ void HoverboardAPI::printStats() {
  *    It is necessary to set a callback if something should happen when the
  *    data arrives. Otherwise the data can just be read from the variable.
  ***************************************************************************/
-void HoverboardAPI::requestRead(Codes code, char som) {
+void HoverboardAPI::requestRead(Codes code, unsigned char som) {
 
     // Compose new Message, no ACK needed.
     PROTOCOL_MSG2 msg = {
@@ -255,7 +245,7 @@ float HoverboardAPI::getMotorAmpsAvg(uint8_t motor) {
  * count -1 for indefinetely
  ***************************************************************************/
 
-void HoverboardAPI::scheduleTransmission(Codes code, int count, unsigned int period, char som) {
+void HoverboardAPI::scheduleTransmission(Codes code, int count, unsigned int period, unsigned char som) {
   PROTOCOL_SUBSCRIBEDATA SubscribeData;
   SubscribeData.code   = code;
   SubscribeData.count  = count;
@@ -275,7 +265,7 @@ void HoverboardAPI::scheduleTransmission(Codes code, int count, unsigned int per
  *    It is necessary to set a callback if something should happen when the
  *    data arrives. Otherwise the data can just be read from the variable.
  ***************************************************************************/
-void HoverboardAPI::scheduleRead(Codes code, int count, unsigned int period, char som) {
+void HoverboardAPI::scheduleRead(Codes code, int count, unsigned int period, unsigned char som) {
 
   // Compose new Message, with ACK.
   PROTOCOL_MSG2 msg = {
@@ -307,7 +297,7 @@ void HoverboardAPI::scheduleRead(Codes code, int count, unsigned int period, cha
 /***************************************************************************
  * Sends PWM values to hoverboard
  ***************************************************************************/
-void HoverboardAPI::sendPWM(int16_t pwm, int16_t steer, char som) {
+void HoverboardAPI::sendPWM(int16_t pwm, int16_t steer, unsigned char som) {
   // Compose new Message
   PROTOCOL_MSG2 msg = {
     .SOM = som,
@@ -329,7 +319,7 @@ void HoverboardAPI::sendPWM(int16_t pwm, int16_t steer, char som) {
   protocol_post(&s, &msg);
 }
 
-void HoverboardAPI::sendDifferentialPWM(int16_t left_cmd, int16_t right_cmd, char som) {
+void HoverboardAPI::sendDifferentialPWM(int16_t left_cmd, int16_t right_cmd, unsigned char som) {
   // Compose new Message
   PROTOCOL_MSG2 msg = {
     .SOM = som,
@@ -357,7 +347,7 @@ void HoverboardAPI::sendPWMData(int16_t pwm,
 				int speed_max_power,
 				int speed_min_power,
 				int speed_minimum_pwm,
-				char som) {
+				unsigned char som) {
   // Compose new Message
   PROTOCOL_MSG2 msg = {
     .SOM = som,
@@ -383,7 +373,7 @@ void HoverboardAPI::sendPWMData(int16_t pwm,
 /***************************************************************************
  * Sends speed control to hoverboard
  ***************************************************************************/
-void HoverboardAPI::sendSpeedData(double left_speed, double right_speed, int16_t max_power, int16_t min_speed, char som) {
+void HoverboardAPI::sendSpeedData(double left_speed, double right_speed, int16_t max_power, int16_t min_speed, unsigned char som) {
   // Compose new Message
   PROTOCOL_MSG2 msg = {
     .SOM = som,
@@ -406,7 +396,7 @@ void HoverboardAPI::sendSpeedData(double left_speed, double right_speed, int16_t
   protocol_post(&s, &msg);
 }
 
-void HoverboardAPI::sendPIDControl(int16_t Kp, int16_t Ki, int16_t Kd, int16_t speed_increment, char som) {
+void HoverboardAPI::sendPIDControl(int16_t Kp, int16_t Ki, int16_t Kd, int16_t speed_increment, unsigned char som) {
   // Compose new Message
   PROTOCOL_MSG2 msg = {
     .SOM = som,
@@ -441,7 +431,7 @@ void HoverboardAPI::sendPIDControl(int16_t Kp, int16_t Ki, int16_t Kd, int16_t s
 /***************************************************************************
  * Sends Buzzer data to hoverboard
  ***************************************************************************/
-void HoverboardAPI::sendBuzzer(uint8_t buzzerFreq, uint8_t buzzerPattern, uint16_t buzzerLen, char som) {
+void HoverboardAPI::sendBuzzer(uint8_t buzzerFreq, uint8_t buzzerPattern, uint16_t buzzerLen, unsigned char som) {
 
   // Compose new Message
   PROTOCOL_MSG2 msg = {
@@ -469,7 +459,7 @@ void HoverboardAPI::sendBuzzer(uint8_t buzzerFreq, uint8_t buzzerPattern, uint16
 /***************************************************************************
  * Sends enable to hoverboard
  ***************************************************************************/
-void HoverboardAPI::sendEnable(uint8_t newEnable, char som) {
+void HoverboardAPI::sendEnable(uint8_t newEnable, unsigned char som) {
 
   // Compose new Message
   PROTOCOL_MSG2 msg = {
@@ -495,7 +485,7 @@ void HoverboardAPI::sendEnable(uint8_t newEnable, char som) {
 /***************************************************************************
  * Reset statistic counters
  ***************************************************************************/
-void HoverboardAPI::sendCounterReset(char som) {
+void HoverboardAPI::sendCounterReset(unsigned char som) {
 
   // Compose new Message
   PROTOCOL_MSG2 msg = {

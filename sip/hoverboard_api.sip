@@ -1,13 +1,18 @@
+
+
+
 %Module hoverboard_api
+
+
 class HoverboardAPI{
 
 %TypeHeaderCode
 #include <HoverboardAPI.h>
 %End
 
-public :
+public:
 
-    enum Codes {
+        enum Codes {
   protocolVersion          = 0x00,
   protocolSubscriptions    = 0x22,
   protocolCountSum         = 0x23,
@@ -26,7 +31,9 @@ public :
   setSpeedKi               = 0x86,
   setSpeedKd               = 0x87,
   setSpeedIncrLimit        = 0x88
-};
+	};
+
+
 
     //commonly used functions **************************************************************************
     HoverboardAPI(char * dev_path);

@@ -59,6 +59,7 @@ int init_serial(char * dev_path){
     char buf[255];
     global_serial_fd = open(dev_path, O_RDWR | O_NOCTTY | O_NDELAY ); 
     if (global_serial_fd <0) {
+      printf("Cannot open port %s \n", dev_path);
       return -1 ;
     }
     if (tcgetattr(global_serial_fd, &options) < 0) {
@@ -82,18 +83,21 @@ int init_serial(char * dev_path){
         return -1;
     }
 
+    printf("Done init serial \n");
     return global_serial_fd;
 }
 
 int send_data_serial(unsigned char * buffer, int len){
   int tmp_length = len ;
   int write_pointer = 0 ;
+
   do{
     int ret = write(global_serial_fd, &(buffer[write_pointer]), tmp_length);
     if(ret < 0) return ret ;
     write_pointer += ret ;
     tmp_length -= ret ;
   }while(tmp_length > 0);
+  //printf("Sent %d bytes \n", len);
   return len ;
 }
 

@@ -45,9 +45,9 @@ setuptools.setup(
      version='0.1',
      packages=['.'],
      package_data={'': ['hoverboard_api.so']},
-     install_requires=[
-          'sip==4.19.6',
-     ],
+     #install_requires=[
+     #     'sip==4.19.6',
+     #],
      author="Jonathan Piat",
      author_email="piat.jonathan@gmail.com",
      description="A package to control a hoverboard",

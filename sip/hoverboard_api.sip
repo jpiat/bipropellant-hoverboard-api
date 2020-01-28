@@ -13,24 +13,24 @@ class HoverboardAPI{
 public:
 
         enum Codes {
-  protocolVersion          = 0x00,
-  protocolSubscriptions    = 0x22,
-  protocolCountSum         = 0x23,
-  protocolCountACK         = 0x23,
-  protocolCountnoACK       = 0x23,
-  sensHall                 = 0x02,
-  setSpeed                 = 0x03,
-  sensElectrical           = 0x08,
-  enableMotors             = 0x09,
-  disablePoweroff          = 0x0A,
-  debugOut                 = 0x0B,
-  setPointPWMData          = 0x0D,
-  setPointPWM              = 0x0E,
-  setBuzzer                = 0x21,
-  setSpeedKp               = 0x85,
-  setSpeedKi               = 0x86,
-  setSpeedKd               = 0x87,
-  setSpeedIncrLimit        = 0x88
+		protocolVersion          = 0x00,
+		protocolSubscriptions    = 0x22,
+		protocolCountSum         = 0x23,
+		protocolCountACK         = 0x23,
+		protocolCountnoACK       = 0x23,
+		sensHall                 = 0x02,
+		setSpeed                 = 0x03,
+		sensElectrical           = 0x08,
+		enableMotors             = 0x09,
+		disablePoweroff          = 0x0A,
+		debugOut                 = 0x0B,
+		setPointPWMData          = 0x0D,
+		setPointPWM              = 0x0E,
+		setBuzzer                = 0x21,
+		setSpeedKp               = 0x85,
+		setSpeedKi               = 0x86,
+		setSpeedKd               = 0x87,
+		setSpeedIncrLimit        = 0x88
 	};
 
 
@@ -41,10 +41,10 @@ public:
     
     void protocolTask();
     %MethodCode
-      unsigned char buffer[32] ;
+      unsigned char buffer[64] ;
       int ret ;
       int read_bytes = 0 ;
-      while(read_bytes < 1024 && ((ret = read_data_serial(buffer, 32)) > 0)){
+      while(read_bytes < 1024 && ((ret = read_data_serial(buffer, 64)) > 0)){
         for(int i = 0 ; i < ret ; i ++){
           sipCpp->protocolPush(buffer[i]);
         }
